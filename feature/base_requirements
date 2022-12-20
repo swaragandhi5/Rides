@@ -1,1 +1,116 @@
+//There are 3 Seprate file for MVVM architecture to keep things organized
+
+//1. ContentView.swift
+
+import SwiftUI
+
+
+struct ContentView: View{
+    @ObservedObject var model = VehicleViewModel()
+    @State var textfieldtext: Int = 0
+    @State var n = []
+    
+    var body: some View{
+        TextField("Type Something here", value: $textfieldtext, formatter: NumberFormatter()).textFieldStyle(RoundedBorderTextFieldStyle())
+        
+            ShowAPI()
+                .environmentObject(model)
+        
+            
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+
+
+
+//2. ShowAPI.swift
+
+import SwiftUI
+
+struct ShowAPI: View{
+    @EnvironmentObject var model: VehicleViewModel
+    
+    @State var n: Int = 0
+    var body: some View{
+        
+        NavigationView{
+            ScrollView{
+                NavigationLink(model.vin, destination: detailedview())
+            }
+        }
+        Button(action: {
+                model.fetchVehicle()
+        }, label: {
+            Text("Display")
+        })
+
+        
+    }
+}
+
+
+struct detailedview: View{
+    @EnvironmentObject var model: VehicleViewModel
+    var body: some View{
+        
+        VStack{
+            Text(model.vin)
+            Text(model.make_and_model)
+            Text(model.color)
+            Text(model.car_type)
+        }
+    }
+}
+
+struct ShowAPI_Previews: PreviewProvider{
+    static var previews: some View{
+        ShowAPI()
+    }
+}
+
+
+//3. ViewModel.swift
+
+import Foundation
+
+//Data needed by the view
+
+class VehicleViewModel: ObservableObject {
+    @Published var vin: String = "-"
+    @Published var make_and_model: String = "-"
+    @Published var color: String = "-"
+    @Published var car_type: String = "-"
+    
+    
+    func fetchVehicle() {
+        guard let url = URL(string: "https://random-data-api.com/api/vehicle/random_vehicle") else{
+            return
+        }
+        let task = URLSession.shared.dataTask(with: url) { data, _, error in
+            guard let data = data, error == nil else {
+                return
+            }
+            //convert data to Model
+            do {
+                let model = try JSONDecoder().decode(VehicleModel.self, from: data)
+                DispatchQueue.main.async {
+                    self.vin = model.vin
+                    self.make_and_model = model.make_and_model
+                    self.color = model.color
+                    self.car_type = model.car_type
+                    
+                }
+            }
+            catch {
+                print("failed")
+            }
+        }
+        task.resume()
+    }
+}
 
